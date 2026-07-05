@@ -33,38 +33,47 @@
     <header>
         <h1>3D ISS Location Tracker</h1>
         <div id="data-panel">
-            <span id="debug-status">Connecting to ISS Telemetry...</span>
+            Latitude: <span id="lat">Connecting...</span> | 
+            Longitude: <span id="lon">Connecting...</span>
         </div>
     </header>
     
     <div id="globeViz"></div>
 
-    <!-- Load Lightweight 3D Globe Library Bundle -->
+    <!-- Load Lightweight 3D Globe Library -->
     <script src="https://unpkg.com/globe.gl"></script>
     <script>
         let pathHistory = [];
-        let myGlobe = null;
 
-        try {
-            myGlobe = Globe()
-                (document.getElementById('globeViz'))
-                .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-                .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-                .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-                .showAtmosphere(true)
-                .atmosphereColor('#4e9ff5')
-                .atmosphereAltitude(0.15);
-
-            // Configure neon tracking path lines
-            myGlobe.pathPoints(d => d)
-                .pathPointLat(d => d.lat)
-                .pathPointLng(d => d.lng)
-                .pathPointAlt(d => d.alt)
-                .pathColor(() => '#00ffff')
-                .pathStroke(3);
-        } catch (globeError) {
-            console.error(globeError);
-        }
+        // Initialize the Globe and define all visual layer styles UP FRONT
+        const myGlobe = Globe()(document.getElementById('globeViz'))
+            .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+            .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+            .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+            .showAtmosphere(true)
+            .atmosphereColor('#4e9ff5')
+            .atmosphereAltitude(0.15)
+            // Define Path Line Styles
+            .pathPoints(d => d)
+            .pathPointLat(d => d.lat)
+            .pathPointLng(d => d.lng)
+            .pathPointAlt(d => d.alt)
+            .pathColor(() => '#00ffff')
+            .pathStroke(3)
+            // Define Point/Marker Styles
+            .pointLat(d => d.lat)
+            .pointLng(d => d.lng)
+            .pointAltitude(d => d.alt)
+            .pointColor(() => '#e43f5a')
+            .pointRadius(0.6)
+            // Define Label Styles
+            .labelLat(d => d.lat)
+            .labelLng(d => d.lng)
+            .labelAltitude(d => d.alt)
+            .labelText(d => d.text)
+            .labelSize(1.5)
+            .labelColor(() => '#4e9ff5')
+            .labelResolution(3);
 
         let firstLoad = true;
 
@@ -78,36 +87,28 @@
                 const longitude = parseFloat(data.longitude);
                 const altitude = 0.08; 
 
-                // Update text panels instantly
-                document.getElementById('data-panel').innerHTML = `Latitude: <span id="lat">${latitude.toFixed(4)}</span>° | Longitude: <span id="lon">${longitude.toFixed(4)}</span>°`;
+                // Update the text UI panel
+                document.getElementById('lat').textContent = latitude.toFixed(4) + '°';
+                document.getElementById('lon').textContent = longitude.toFixed(4) + '°';
 
-                if (myGlobe) {
-                    // Update neon path history trail array
-                    pathHistory.push({ lat: latitude, lng: longitude, alt: altitude });
-                    myGlobe.pathsData([pathHistory]);
+                // Pass dynamic tracking data arrays straight into the pre-configured globe layers
+                myGlobe.pointsData([{ lat: latitude, lng: longitude, alt: altitude }]);
+                myGlobe.labelsData([{ lat: latitude, lng: longitude, alt: altitude + 0.01, text: 'ISS SATELLITE' }]);
+                
+                pathHistory.push({ lat: latitude, lng: longitude, alt: altitude });
+                myGlobe.pathsData([pathHistory]);
 
-                    // Render 3D tracking cylinder marker point
-                    myGlobe.pointsData([{ lat: latitude, lng: longitude, alt: altitude }]);
-                    myGlobe.pointColor(() => '#e43f5a');
-                    myGlobe.pointRadius(0.6);
-
-                    // Render crisp text label without special characters
-                    myGlobe.labelsData([{ lat: latitude, lng: longitude, alt: altitude + 0.01, text: 'ISS SATELLITE' }]);
-                    myGlobe.labelText(d => d.text);
-                    myGlobe.labelSize(1.4);
-                    myGlobe.labelColor(() => '#4e9ff5');
-                    myGlobe.labelResolution(3);
-
-                    if (firstLoad) {
-                        myGlobe.pointOfView({ lat: latitude, lng: longitude, altitude: 2.0 }, 1000);
-                        firstLoad = false;
-                    }
+                // Smooth camera auto-center on first launch jump
+                if (firstLoad) {
+                    myGlobe.pointOfView({ lat: latitude, lng: longitude, altitude: 2.0 }, 1000);
+                    firstLoad = false;
                 }
             } catch (error) {
-                console.warn(error);
+                console.warn("Retrying telemetry sync...", error);
             }
         }
 
+        // Run tracking loops
         getISS();
         setInterval(getISS, 3000);
     </script>
