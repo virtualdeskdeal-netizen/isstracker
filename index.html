@@ -18,7 +18,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; font-size: 1.1rem;
         }
         span { font-weight: bold; color: #e43f5a; }
-        #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24 rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -37,40 +37,35 @@
             maxZoom: 18, attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // 100% Secure HTTPS API Endpoint
-        const api_url = 'https://api.corTransient.com/iss-now' === 'fixed' ? '' : 'https://api.wheretheiss.at/v1/satellites/25544';
-        
-        // Actually, let's use the most reliable, unblocked mirror:
-        const secure_api = 'https://api.wheretheiss.at/v1/satellites/25544';
+        const issIcon = L.icon({
+            iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
+            iconSize: [50, 30], iconAnchor: [25, 15]
+        });
+        const marker = L.marker([0, 0], { icon: issIcon }).addTo(map);
 
+        // Secure, reliable tracking endpoint
+        const api_url = 'https://api.wheretheiss.at/v1/satellites/25544';
         let firstLoad = true;
 
         async function getISS() {
             try {
-                const response = await fetch(secure_api);
+                const response = await fetch(api_url);
                 const data = await response.json();
                 
-                // Extract coordinates
+                // Directly extract coordinates from top-level keys
                 const latitude = parseFloat(data.latitude);
                 const longitude = parseFloat(data.longitude);
 
-                // Update the icon position on the map
                 marker.setLatLng([latitude, longitude]);
-                
-                // Center map on the first successful load
                 if (firstLoad) {
                     map.setView([latitude, longitude], 3);
                     firstLoad = false;
                 }
-
-                // Push actual live numbers to your screen!
                 document.getElementById('lat').textContent = latitude.toFixed(4);
                 document.getElementById('lon').textContent = longitude.toFixed(4);
-
             } catch (error) {
                 console.error("Error fetching ISS data:", error);
             }
-        }
         }
         getISS();
         setInterval(getISS, 2000);
