@@ -18,7 +18,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; font-size: 1.1rem;
         }
         span { font-weight: bold; color: #e43f5a; }
-        #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24 rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -36,8 +36,12 @@
     <script>
         const map = L.map('map').setView([0, 0], 2);
         
-        // Direct subdomain tile URL (Clean and build-safe)
-        L.tileLayer('https://a.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Assembling the template keys using char codes to hide curly braces from Jekyll completely
+        const openBrace = String.fromCharCode(123);
+        const closeBrace = String.fromCharCode(125);
+        const tilePattern = "https://" + openBrace + "s" + closeBrace + ".tile.openstreetmap.org/" + openBrace + "z" + closeBrace + "/" + openBrace + "x" + closeBrace + "/" + openBrace + "y" + closeBrace + ".png";
+
+        L.tileLayer(tilePattern, {
             maxZoom: 18, 
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -54,7 +58,7 @@
         async function getISS() {
             try {
                 const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
-                if (!response.ok) throw new Error('API limit or down');
+                if (!response.ok) throw new Error('API Rate Limit or Restriction');
                 const data = await response.json();
                 
                 const latitude = parseFloat(data.latitude);
@@ -70,7 +74,7 @@
                 document.getElementById('lat').textContent = latitude.toFixed(4);
                 document.getElementById('lon').textContent = longitude.toFixed(4);
             } catch (error) {
-                console.warn("Connection loading...");
+                console.warn("Retrying stream setup...");
             }
         }
 
