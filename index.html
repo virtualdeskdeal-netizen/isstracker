@@ -55,7 +55,7 @@
             .atmosphereColor('#4e9ff5')
             .atmosphereAltitude(0.15);
 
-        // Configure the orbital tracking line route
+        // Configure the orbital tracking line route (Neon Cyan Line)
         myGlobe.pathPoints(d => d)
             .pathPointLat(d => d.lat)
             .pathPointLng(d => d.lng)
@@ -63,26 +63,23 @@
             .pathColor(() => '#00ffff')
             .pathStroke(3);
 
-        // Native 3D Custom Layer to display the ISS Icon safely
-        myGlobe.customLayerData([{ lat: 0, lng: 0, alt: 0.08 }]);
-        myGlobe.customThreeObject(d => {
-            // Create a clean 3D plane texture for the image canvas
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.src = 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg';
-            
-            const texture = new THREE.Texture(img);
-            img.onload = () => texture.needsUpdate = true;
+        // Native 3D Glowing Point for the ISS Location
+        myGlobe.pointsData([{ lat: 0, lng: 0, alt: 0.08 }])
+            .pointLat(d => d.lat)
+            .pointLng(d => d.lng)
+            .pointAltitude(d => d.alt)
+            .pointColor(() => '#e43f5a')
+            .pointRadius(0.6);
 
-            const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
-            const geometry = new THREE.PlaneGeometry(16, 10); // Scaled 3D proportions
-            return new THREE.Mesh(geometry, material);
-        });
-        
-        // Auto-rotate the icon to constantly face the user's camera viewpoint
-        myGlobe.customThreeObjectUpdate((obj, d) => {
-            obj.lookAt(myGlobe.camera().position);
-        });
+        // Native 3D Label text hovering over the point
+        myGlobe.labelsData([{ lat: 0, lng: 0, alt: 0.09, text: '🛰️ ISS' }])
+            .labelLat(d => d.lat)
+            .labelLng(d => d.lng)
+            .labelAltitude(d => d.alt)
+            .labelText(d => d.text)
+            .labelSize(1.5)
+            .labelColor(() => '#4e9ff5')
+            .labelResolution(3);
 
         let firstLoad = true;
 
@@ -96,18 +93,21 @@
                 const longitude = parseFloat(data.longitude);
                 const altitude = 0.08; 
 
-                // Reposition the ISS 3D object marker
-                myGlobe.customLayerData([{ lat: latitude, lng: longitude, alt: altitude }]);
+                // Update native 3D point location
+                myGlobe.pointsData([{ lat: latitude, lng: longitude, alt: altitude }]);
+                
+                // Update native 3D label location
+                myGlobe.labelsData([{ lat: latitude, lng: longitude, alt: altitude + 0.01, text: '🛰️ ISS' }]);
 
                 // Append coordinates to the tracking path line array
                 pathHistory.push({ lat: latitude, lng: longitude, alt: altitude });
                 myGlobe.pathsData([pathHistory]);
 
-                // Update text metrics UI panels
+                // Update the text dashboard
                 document.getElementById('lat').textContent = latitude.toFixed(4);
                 document.getElementById('lon').textContent = longitude.toFixed(4);
 
-                // Center camera view on initial payload grab
+                // Center camera view on initial load
                 if (firstLoad) {
                     myGlobe.pointOfView({ lat: latitude, lng: longitude, altitude: 2.0 }, 1000);
                     firstLoad = false;
@@ -117,7 +117,7 @@
             }
         }
 
-        // Execute API loop
+        // Execute API loop immediately and refresh every 3 seconds
         getISS();
         setInterval(getISS, 3000);
     </script>
