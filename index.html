@@ -36,8 +36,9 @@
     <script>
         const map = L.map('map').setView([0, 0], 2);
         
-        // Jekyll-safe direct map tile URL
-        L.tileLayer('https://a.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Formatted to completely bypass GitHub Jekyll deployment errors
+        const tileUrl = 'https://' + '{s}' + '.tile.openstreetmap.org/' + '{z}' + '/' + '{x}' + '/' + '{y}' + '.png';
+        L.tileLayer(tileUrl, {
             maxZoom: 18, 
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -52,12 +53,9 @@
         let firstLoad = true;
 
         async function getISS() {
-            // Switched to an ultra-fast, high-uptime proxy to ensure it never freezes
-            const url = 'https://corsproxy.io/?url=' + encodeURIComponent('https://api.wheretheiss.at/v1/satellites/25544');
-
             try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Proxy error');
+                const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+                if (!response.ok) throw new Error('API down');
                 const data = await response.json();
                 
                 const latitude = parseFloat(data.latitude);
@@ -73,7 +71,7 @@
                 document.getElementById('lat').textContent = latitude.toFixed(4);
                 document.getElementById('lon').textContent = longitude.toFixed(4);
             } catch (error) {
-                console.warn("Retrying data connection...");
+                console.warn("API temporary limit, retrying...");
             }
         }
 
