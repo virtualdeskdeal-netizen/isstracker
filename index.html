@@ -43,10 +43,9 @@
     <!-- Load Lightweight 3D Globe Library -->
     <script src="https://unpkg.com/globe.gl"></script>
     <script>
-        // Store coordinate history for the 3D route path line
         let pathHistory = [];
 
-        // Initialize the 3D Globe using high-resolution, English-labeled maps
+        // Initialize Globe
         const myGlobe = Globe()
             (document.getElementById('globeViz'))
             .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -56,7 +55,7 @@
             .atmosphereColor('#4e9ff5')
             .atmosphereAltitude(0.15);
 
-        // Configure the orbital path styling (Neon Cyan Line)
+        // Path styling
         myGlobe.pathPoints(d => d)
             .pathPointLat(d => d.lat)
             .pathPointLng(d => d.lng)
@@ -64,17 +63,14 @@
             .pathColor(() => '#00ffff')
             .pathStroke(3);
 
-        // Configure the ISS satellite icon pin marker
-        myGlobe.objectsData([{ lat: 0, lng: 0, alt: 0.07 }])
-            .objectLat(d => d.lat)
-            .objectLng(d => d.lng)
-            .objectAltitude(d => d.alt)
-            .objectComponent(() => {
-                const img = document.createElement('img');
-                img.src = 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg';
-                img.style.width = '50px';
-                return img;
-            });
+        // Using standard 3D HTML marker overlay for better reliability
+        myGlobe.htmlElementsData([{ lat: 0, lng: 0, alt: 0.07 }]);
+        myGlobe.htmlElement(d => {
+            const el = document.createElement('img');
+            el.src = 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg';
+            el.style.width = '50px';
+            return el;
+        });
 
         let firstLoad = true;
 
@@ -86,30 +82,32 @@
                 
                 const latitude = parseFloat(data.latitude);
                 const longitude = parseFloat(data.longitude);
-                // Convert orbital altitude scale to fit neatly around the 3D sphere globe
                 const altitude = 0.07; 
 
-                // Update the real-time position of the satellite icon
-                myGlobe.objectsData([{ lat: latitude, lng: longitude, alt: altitude }]);
+                // Dynamically update the ISS position
+                myGlobe.htmlElementsData([{ lat: latitude, lng: longitude, alt: altitude }]);
 
-                // Append current coordinates to the persistent tracking line array
+                // Track the orbital history line
                 pathHistory.push({ lat: latitude, lng: longitude, alt: altitude });
                 myGlobe.pathsData([pathHistory]);
 
-                // Smoothly swing the 3D camera to track the satellite on initialization
-                if (firstLoad) {
-                    myGlobe.pointOfView({ lat: latitude, lng: longitude, altitude: 2.0 }, 2000);
-                    firstLoad = false;
-                }
-
+                // Update text panels
                 document.getElementById('lat').textContent = latitude.toFixed(4);
                 document.getElementById('lon').textContent = longitude.toFixed(4);
+
+                // Center camera on the ISS only on the very first data load
+                if (firstLoad) {
+                    myGlobe.pointOfView({ lat: latitude, lng: longitude, altitude: 2.0 }, 1000);
+                    firstLoad = false;
+                }
             } catch (error) {
                 console.warn("Syncing live telemetry feed...");
             }
         }
 
+        // Run immediately
         getISS();
+        // Refresh every 3 seconds
         setInterval(getISS, 3000);
     </script>
 </body>
