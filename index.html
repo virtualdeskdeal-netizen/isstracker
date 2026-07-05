@@ -9,7 +9,7 @@
         body {
             font-family: sans-serif;
             margin: 0; padding: 0; background-color: #1a1a2e; color: #fff;
-            display: flex; flex-direction: column; align-items: center; height: 100vh;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
         header { margin: 20px 0; text-align: center; }
         h1 { margin: 0 0 10px 0; color: #4e9ff5; }
@@ -19,6 +19,7 @@
         }
         span { font-weight: bold; color: #e43f5a; }
         #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        footer { margin-top: 25px; margin-bottom: 25px; font-size: 0.9rem; color: #4e9ff5; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -29,24 +30,32 @@
             Longitude: <span id="lon">0.00</span>°
         </div>
     </header>
+    
     <div id="map"></div>
+
+    <footer>
+        Made by Andy
+    </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Initialize the map container
         const map = L.map('map').setView([0, 0], 2);
         
-        // Load the map imagery tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18, 
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Define a custom space station icon
         const issIcon = L.icon({
             iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
-            async function getISS() {
-            // Try the primary API first, fallback to an open mirror if blocked
+            iconSize: [50, 30], 
+            iconAnchor: [25, 15]
+        });
+        const marker = L.marker([0, 0], { icon: issIcon }).addTo(map);
+
+        let firstLoad = true;
+
+        async function getISS() {
             const endpoints = [
                 'https://api.wheretheiss.at/v1/satellites/25544',
                 'https://api.allorigins.win/raw?url=https://api.wheretheiss.at/v1/satellites/25544'
@@ -55,7 +64,7 @@
             for (let url of endpoints) {
                 try {
                     const response = await fetch(url);
-                    if (!response.ok) throw new Error('API restricted or down');
+                    if (!response.ok) throw new Error('API restriction');
                     const data = await response.json();
                     
                     const latitude = parseFloat(data.latitude);
@@ -70,18 +79,13 @@
 
                     document.getElementById('lat').textContent = latitude.toFixed(4);
                     document.getElementById('lon').textContent = longitude.toFixed(4);
-                    return; // Success! Break out of the loop
+                    return; 
                 } catch (error) {
-                    console.warn(`Failed fetching from ${url}:`, error);
+                    console.warn(`Skipping endpoint: ${url}`);
                 }
             }
         }
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        }
 
-        // Run immediately, then repeat every 3 seconds
         getISS();
         setInterval(getISS, 3000);
     </script>
