@@ -19,7 +19,6 @@
         }
         span { font-weight: bold; color: #e43f5a; }
         #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        footer { margin-top: 25px; margin-bottom: 25px; font-size: 0.9rem; color: #4e9ff5; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -33,15 +32,11 @@
     
     <div id="map"></div>
 
-    <footer>
-        Made by Andy
-    </footer>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const map = L.map('map').setView([0, 0], 2);
         
-        // Removed {s} to prevent GitHub's Jekyll compiler from breaking the build
+        // Jekyll-safe direct map tile URL
         L.tileLayer('https://a.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18, 
             attribution: '© OpenStreetMap contributors'
@@ -57,7 +52,7 @@
         let firstLoad = true;
 
         async function getISS() {
-            // Using the allorigins proxy to guarantee we don't get a CORS block
+            // Bulletproof proxy wrapper to bypass CORS blocks
             const url = 'https://api.allorigins.win/raw?url=https://api.wheretheiss.at/v1/satellites/25544';
 
             try {
