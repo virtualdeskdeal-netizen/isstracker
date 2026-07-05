@@ -41,7 +41,8 @@
     <script>
         const map = L.map('map').setView([0, 0], 2);
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Removed {s} to prevent GitHub's Jekyll compiler from breaking the build
+        L.tileLayer('https://a.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18, 
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -56,33 +57,28 @@
         let firstLoad = true;
 
         async function getISS() {
-            const endpoints = [
-                'https://api.wheretheiss.at/v1/satellites/25544',
-                'https://api.allorigins.win/raw?url=https://api.wheretheiss.at/v1/satellites/25544'
-            ];
+            // Using the allorigins proxy to guarantee we don't get a CORS block
+            const url = 'https://api.allorigins.win/raw?url=https://api.wheretheiss.at/v1/satellites/25544';
 
-            for (let url of endpoints) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error('API restriction');
-                    const data = await response.json();
-                    
-                    const latitude = parseFloat(data.latitude);
-                    const longitude = parseFloat(data.longitude);
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network issue');
+                const data = await response.json();
+                
+                const latitude = parseFloat(data.latitude);
+                const longitude = parseFloat(data.longitude);
 
-                    marker.setLatLng([latitude, longitude]);
-                    
-                    if (firstLoad) {
-                        map.setView([latitude, longitude], 3);
-                        firstLoad = false;
-                    }
-
-                    document.getElementById('lat').textContent = latitude.toFixed(4);
-                    document.getElementById('lon').textContent = longitude.toFixed(4);
-                    return; 
-                } catch (error) {
-                    console.warn(`Skipping endpoint: ${url}`);
+                marker.setLatLng([latitude, longitude]);
+                
+                if (firstLoad) {
+                    map.setView([latitude, longitude], 3);
+                    firstLoad = false;
                 }
+
+                document.getElementById('lat').textContent = latitude.toFixed(4);
+                document.getElementById('lon').textContent = longitude.toFixed(4);
+            } catch (error) {
+                console.warn("Retrying fetch...");
             }
         }
 
