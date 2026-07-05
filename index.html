@@ -2,30 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time ISS Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; background: #1a1a2e; color: #fff; display: flex; flex-direction: column; align-items: center; height: 100vh; font-family: sans-serif; }
-        #map { width: 90%; height: 70vh; border-radius: 10px; margin-top: 20px; }
+        body {
+            font-family: sans-serif;
+            margin: 0; padding: 0; background-color: #1a1a2e; color: #fff;
+            display: flex; flex-direction: column; align-items: center; height: 100vh;
+        }
+        header { margin: 20px 0; text-align: center; }
+        h1 { margin: 0 0 10px 0; color: #4e9ff5; }
+        #data-panel {
+            background: #162447; padding: 10px 20px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; font-size: 1.1rem;
+        }
+        span { font-weight: bold; color: #e43f5a; }
+        #map { width: 85%; height: 60vh; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
-    <h1>ISS Tracker</h1>
+    <header>
+        <h1>ISS Location Tracker</h1>
+        <div id="data-panel">
+            Latitude: <span id="lat">0.00</span>° | 
+            Longitude: <span id="lon">0.00</span>°
+        </div>
+    </header>
     <div id="map"></div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Initialize the map container
         const map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-        const marker = L.marker([0, 0]).addTo(map);
+        
+        // Load the map imagery tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18, 
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Define a custom space station icon
+        const issIcon = L.icon({
+            iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
+            iconSize: [50, 30], 
+            iconAnchor: [25, 15]
+        });
+        const marker = L.marker([0, 0], { icon: issIcon }).addTo(map);
+
+        let firstLoad = true;
 
         async function getISS() {
-            // Using a reliable proxy to ensure the browser doesn't block the request
-            const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
-            const data = await response.json();
-            marker.setLatLng([data.latitude, data.longitude]);
+            try {
+                const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+                const data = await response.json();
+                
+                const latitude = parseFloat(data.latitude);
+                const longitude = parseFloat(data.longitude);
+
+                // Move the marker onto the map
+                marker.setLatLng([latitude, longitude]);
+                
+                // Snap map view to position on first load
+                if (firstLoad) {
+                    map.setView([latitude, longitude], 3);
+                    firstLoad = false;
+                }
+
+                // Dynamically update the HTML numbers on the user screen
+                document.getElementById('lat').textContent = latitude.toFixed(4);
+                document.getElementById('lon').textContent = longitude.toFixed(4);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
         }
-        setInterval(getISS, 3000);
+
+        // Run immediately, then repeat every 3 seconds
         getISS();
+        setInterval(getISS, 3000);
     </script>
 </body>
 </html>
