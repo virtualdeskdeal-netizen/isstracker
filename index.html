@@ -30,6 +30,7 @@
         }
         span { font-weight: bold; color: #e43f5a; }
         #cesiumContainer { width: 100vw; height: 100vh; margin: 0; padding: 0; }
+        /* Clean up default Cesium UI buttons we don't need */
         .cesium-viewer-bottom, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
             display: none !important;
         }
@@ -49,10 +50,19 @@
     <!-- Load the CesiumJS 3D Library Engine -->
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Cesium.js"></script>
     <script>
-        // Initialize the 3D Globe
+        // Disable Cesium Ion access tokens completely to prevent authorization errors
+        Cesium.Ion.defaultAccessToken = null;
+
+        // Bypassing GitHub build engine templates safely using character string concatenation
+        const braceOpen = String.fromCharCode(123);
+        const braceClose = String.fromCharCode(125);
+        const cartoUrl = "https://" + braceOpen + "s" + braceClose + ".basemaps.cartocdn.com/rastertiles/voyager/" + braceOpen + "z" + braceClose + "/" + braceOpen + "x" + braceClose + "/" + braceOpen + "y" + braceClose + ".png";
+
+        // Initialize the 3D Globe with an open-source, English-first map layer
         const viewer = new Cesium.Viewer('cesiumContainer', {
-            imageryProvider: new Cesium.OpenStreetMapImageryProvider({
-                url : 'https://a.tile.openstreetmap.org/'
+            imageryProvider: new Cesium.UrlTemplateImageryProvider({
+                url: cartoUrl,
+                credit: '© OpenStreetMap contributors, © CARTO'
             }),
             terrainProvider: new Cesium.EllipsoidTerrainProvider(),
             baseLayerPicker: false,
@@ -67,30 +77,31 @@
             fullscreenButton: false
         });
 
-        viewer.scene.globe.enableLighting = true;
-        viewer.scene.skyAtmosphere.show = true;
+        viewer.scene.globe.enableLighting = false; // Turned off to ensure clear map daylight visibility everywhere
 
-        // Create a SampledPositionProperty to record the history of coordinates for the tracking path
-        const positionProperty = new Cesium.SampledPositionProperty();
-        positionProperty.forwardExtrapolationType = Cesium.ExtrapolationType.HOLD;
+        // Set up an array to log the 3D coordinate points for the path history line
+        let pathPositions = [];
 
-        // Create the 3D ISS Marker and attach a path tracking property
+        // Add a line entity to track the orbital route trail
+        const routeLine = viewer.entities.add({
+            polyline: {
+                positions: new Cesium.CallbackProperty(function() {
+                    return pathPositions;
+                }, false),
+                width: 4,
+                material: Cesium.Color.CYAN
+            }
+        });
+
+        // Create the 3D ISS satellite icon marker
         const issEntity = viewer.entities.add({
             name: 'ISS',
-            position: positionProperty, // Use our tracking position history
+            position: Cesium.Cartesian3.fromDegrees(0, 0, 420000), 
             billboard: {
                 image: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
-                width: 60,
-                height: 36,
+                width: 55,
+                height: 33,
                 alignment: Cesium.BillboardAlignment.CENTER
-            },
-            path: {
-                show: true,
-                leadTime: 0,            // Do not try to predict or draw into the future
-                trailTime: 3600,        // Show the tracking path trail for the last 60 minutes (3600 seconds)
-                width: 4,               // Line thickness
-                material: Cesium.Color.CYAN, // Vibrant neon blue tracking line color
-                resolution: 1
             }
         });
 
@@ -99,25 +110,29 @@
         async function getISS() {
             try {
                 const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
-                if (!response.ok) throw new Error('API Rate Limit');
+                if (!response.ok) throw new Error('API down');
                 const data = await response.json();
                 
                 const latitude = parseFloat(data.latitude);
                 const longitude = parseFloat(data.longitude);
-                const altitude = parseFloat(data.altitude) * 1000; // Convert km to meters
+                const altitude = parseFloat(data.altitude) * 1000; // Convert kilometers to meters
 
-                const nextPosition = Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude);
-                const currentTime = Cesium.JulianDate.now();
-
-                // Add the current position pinpoint into the path history line array
-                positionProperty.addSample(currentTime, nextPosition);
+                const currentPosition = Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude);
                 
-                // Set clock time to match the added sample points so the path renders correctly
-                viewer.clock.currentTime = currentTime;
+                // Relocate the space station icon marker to its current coordinates
+                issEntity.position = currentPosition;
+                
+                // Add the coordinate directly into our path array history log
+                pathPositions.push(currentPosition);
 
+                // Limit the trail history length to the last 1000 updates to preserve browser speed
+                if (pathPositions.length > 1000) {
+                    pathPositions.shift();
+                }
+                
                 if (firstLoad) {
                     viewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + 15000000),
+                        destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + 12000000),
                         orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
                         duration: 2
                     });
@@ -127,7 +142,7 @@
                 document.getElementById('lat').textContent = latitude.toFixed(4);
                 document.getElementById('lon').textContent = longitude.toFixed(4);
             } catch (error) {
-                console.warn("Retrying orbit telemetry...");
+                console.warn("Telemetry connection loading...");
             }
         }
 
