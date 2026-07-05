@@ -7,8 +7,8 @@
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background-color: #000; color: #fff; overflow: hidden; }
         header { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; width: 90%; }
-        h1 { margin: 0; color: #4e9ff5; font-size: 1.5rem; }
-        #data-panel { background: rgba(22, 36, 71, 0.8); padding: 5px 15px; border-radius: 5px; display: inline-block; margin-top: 5px; }
+        h1 { margin: 0; color: #4e9ff5; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+        #data-panel { background: rgba(22, 36, 71, 0.8); padding: 5px 15px; border-radius: 5px; display: inline-block; margin-top: 5px; border: 1px solid #4e9ff5; }
         #globeViz { width: 100vw; height: 100vh; }
     </style>
 </head>
@@ -18,23 +18,37 @@
         <div id="data-panel">Lat: <span id="lat">...</span> | Lon: <span id="lon">...</span></div>
     </header>
     <div id="globeViz"></div>
+
     <script src="https://unpkg.com/globe.gl"></script>
     <script>
         const myGlobe = Globe()(document.getElementById('globeViz'))
             .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-            .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png');
+            .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+            // Custom ISS Image Setup
+            .htmlElementsData([])
+            .htmlElement(d => {
+                const el = document.createElement('img');
+                el.src = 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg';
+                el.style.width = '50px';
+                el.style.filter = 'drop-shadow(0 0 5px #fff)';
+                return el;
+            });
 
         async function updateISS() {
             try {
                 const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
                 const data = await res.json();
                 const { latitude: lat, longitude: lng } = data;
+                
                 document.getElementById('lat').textContent = lat.toFixed(2);
                 document.getElementById('lon').textContent = lng.toFixed(2);
-                myGlobe.pointsData([{ lat, lng, size: 0.5 }]);
+                
+                // Update the icon position
+                myGlobe.htmlElementsData([{ lat, lng }]);
             } catch(e) { console.error(e); }
         }
-        setInterval(updateISS, 5000);
+
+        setInterval(updateISS, 3000);
         updateISS();
     </script>
 </body>
